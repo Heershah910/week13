@@ -1,31 +1,32 @@
 import streamlit as st
-from keras.models import load_model
+from tensorflow.keras.models import load_model
 from PIL import Image, ImageOps
 import numpy as np
 
-# Load model and labels
-model = load_model("keras_Model.h5", compile=False)
-class_names = open("labels.txt", "r").readlines()
+st.title("🐾 Cats vs Dogs Classifier")
 
-st.title("🧠 Teachable Machine Image Classifier")
+@st.cache_resource
+def get_model():
+    return load_model("model.h5", compile=False)
 
-uploaded_image = st.file_uploader("Upload an image", type=["jpg", "jpeg", "png"])
+model = get_model()
 
-if uploaded_image is not None:
-    image = Image.open(uploaded_image).convert("RGB")
-    st.image(image, caption="Uploaded Image", use_column_width=True)
+with open("labels.txt") as f:
+    class_names = [line.strip() for line in f]
 
-    # Preprocess
-    image = ImageOps.fit(image, (224, 224), Image.Resampling.LANCZOS)
-    image_array = np.asarray(image).astype(np.float32)
-    normalized = (image_array / 127.5) - 1
-    data = np.ndarray(shape=(1, 224, 224, 3), dtype=np.float32)
-    data[0] = normalized
+uploaded = st.file_uploader("Upload a cat or dog photo", type=["jpg","jpeg","png"])
+if uploaded:
+    img = Image.open(uploaded).convert("RGB")
+    st.image(img, width=300, caption="Uploaded Image")
 
-    prediction = model.predict(data)
-    index = np.argmax(prediction)
-    class_name = class_names[index].strip()
-    confidence = prediction[0][index]
+    img = ImageOps.fit(img, (224,224), Image.Resampling.LANCZOS)
+    arr = np.array(img).astype("float32")
+    arr = (arr / 127.5) - 1  # normalize
+    batch = np.expand_dims(arr, 0)
 
-    st.success(f"🧾 Prediction: **{class_name}** ({confidence:.2%})")
+    preds = model.predict(batch)[0]
+    idx = np.argmax(preds)
+    label = class_names[idx]
+    conf = preds[idx]
 
+    st.success(f"Prediction: **{label}** ({conf*100:.2f}%)")
