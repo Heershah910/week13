@@ -1,2 +1,2 @@
-0 normal
-1 defective
+cat
+dog
